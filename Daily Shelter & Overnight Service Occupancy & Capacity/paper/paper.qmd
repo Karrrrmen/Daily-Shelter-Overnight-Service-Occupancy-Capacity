@@ -1,0 +1,202 @@
+---
+title: "Analyzing Trends in Daily Shelter Occupancy and Capacity: A Study of Overnight Services"
+subtitle: "A Statistical Basis for Community Services Improvement"
+author: 
+  - Karmen Zhu
+thanks: "Code and data are available at: https://github.com/Karrrrmen/termpaper1"
+date: 26 September 2024
+date-format: long
+abstract: "This study focuses on the simulation and analysis of daily shelter and overnight service occupancy and capacity data. Using data from Toronto’s Shelter Management Information System (SMIS), We simulate a data set representing occupancy trends and perform data cleaning to organize and process the data for further analysis. The dataset captures shelter usage patterns, occupancy rates, and available capacity based on room and bed types. The analysis highlights key trends and provides a framework for data management and capacity assessment in the shelter system."
+format: pdf
+number-sections: true
+bibliography: references.bib
+---
+
+```{r}
+#| include: false
+#| warning: false
+#| message: false
+
+library(tidyverse)
+
+data <- read_csv(here::here("data/analysis_data/analysis_data.csv"))
+
+```
+
+
+# Introduction
+
+In urban environments, the struggle against homelessness is not just a social issue but a complex interplay of economic, mental health, and systemic factors that demand immediate attention from city governments and community organizations. Effective management of shelter services is vital not only for addressing urgent housing needs but also for shaping broader public policy and urban planning strategies. This study delves into the daily occupancy data of shelter and overnight services in Toronto @opendatatoronto, sourced from the Shelter Management Information System (SMIS), to uncover underlying trends and insights that can inform resource allocation and intervention strategies.
+
+Shelter services serve as a lifeline for individuals and families experiencing homelessness, reflecting the socio-economic challenges inherent in urban living. High occupancy rates signal a critical need for more resources, while low rates may indicate issues of underutilization or accessibility. Yet, the narrative surrounding shelter usage is more nuanced; the reliance on emergency services without prior referrals reveals significant gaps in preventive systems. By examining the dynamics of these services and the socio-economic factors at play, this paper aims to illuminate the pressing issues of mental health, economic instability, and high housing costs that perpetuate reliance on emergency shelters.
+
+While previous research has explored various socio-economic indicators impacting housing stability, there is a notable gap in understanding how occupancy rates in shelters correlate with community needs over time. This paper seeks to bridge that gap, providing insights that can empower city planners and policymakers to design more effective strategies for managing shelter resources and addressing the root causes of homelessness. 
+
+We run the model in R. The structure of this paper is as follows: first, we review the data on shelter services and their management (see Data). Second, we present our results from data sources (see Results). Finally, we analyze the results and discuss their implications for public policy and future research (see Discussion).
+
+
+# Data {#sec-data}
+
+## Raw Data {#sec-first-point}
+The data used in this paper is access in from Open Data Toronto and the particular data set used was the Daily Shelter & Overnight Service Occupancy & Capacity (@opendatatoronto). To analysis the data and creating graphs using the data, following package that was build in the (R program @citeR) was used: tidyverse (@tidyverse), dplyr (@dplyr), lubridate (@lubridate), and ggplot2 (@ggplot2). We clean the column names, separate the date into `year` and `month`, and create a standardized date column for monthly aggregation. The cleaned data is then saved for further analysis.
+
+```{r}
+# Randomly select 10 rows from the data
+sampled_data <- data |> sample_n(10)
+
+# Display the selected data
+sampled_data
+
+```
+
+## Limitation of Data
+This data is unaudited and compiled directly from an administrative database. It reflects the recorded state of each program at the time of entry and may not always accurately represent the current situation within each program.
+
+
+# Results {#sec-mydatasection}
+
+## Usage rate for both beds and rooms throughrout the year.
+```{r}
+#| label: fig-beds-status
+#| fig-cap: Bed Occupancy Status
+#| echo: false
+
+data |>
+  ggplot(aes(x = month, y = occupied_beds, fill = unoccupied_beds)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(x = "Month", y = "Number of Beds", fill = "Bed Status") +
+  theme_minimal()
+```
+
+```{r}
+#| label: fig-rooms-status
+#| fig-cap: Rooms Occupancy Status
+#| echo: false
+
+data |>
+  ggplot(aes(x = month, y = occupied_rooms, fill = unoccupied_rooms)) +
+  geom_bar(stat = "identity", position = "stack") +
+  labs(x = "Month", y = "Number of Beds", fill = "Bed Status") +
+  theme_minimal()
+```
+
+## The table and the graph below illustrates the usage of various types of overnight services
+```{r}
+overnight_service_count <- data %>% count(program_area, sort = TRUE) 
+overnight_service_count
+```
+
+```{r}
+#| label: fig-service-type
+#| fig-cap: Various Overnight Service Type
+#| echo: false
+
+ggplot(data, aes(x = program_area, y = service_user_count)) +
+  geom_bar(stat = "identity", fill = "tan") +
+  labs(x = "Overnight Service Type", y = "User Count") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+## The table and histogram below (@fig-homeless-groups) illustrate the occupancy distribution across various demographic groups in shelters
+```{r}
+gender_count <- data %>% count(gender, sort = TRUE) 
+gender_count
+```
+
+```{r}
+#| label: fig-homeless-groups
+#| fig-cap: the Main Group at the Shelter
+#| echo: false
+ggplot(data, aes(x = gender)) +
+  geom_bar(fill = "tan") +
+  labs(title = "Counts by Gender", x = "Groups", y = "Count") +
+  theme_minimal()
+```
+
+
+## A classification(@fig-classification) of shelter programs as either Emergency or Transitional
+The following analysis categorizes shelter programs as either Emergency or Transitional, illustrating the conditions under which occupants find themselves reliant on these services.
+```{r}
+#| label: fig-classification
+#| fig-cap: the Conditions for Occupants
+#| echo: false
+
+c <- ggplot(data, aes(x = program_model))
+
+# Add geom_dotplot() with specified binwidth and additional aesthetics
+conditions <- c + 
+  geom_dotplot(aes(y = service_user_count, fill = program_model,
+                   color = program_model, alpha = 0.4),
+               binaxis = "y", stackdir = "center", dotsize = 0.5,
+               binwidth = 1) +  # Set binwidth to a suitable value (adjust as needed)
+  labs(title = "Emergency or Transitional", x = "Conditions", y = "Count") +
+  theme_minimal() + theme()
+
+conditions
+```
+
+\newpage
+
+# Discussion
+
+## First discussion point
+From the visualizations (@fig-beds-status, @fig-rooms-status) reveal a consistent trend of high occupancy throughout the year. In every month, the proportion of unoccupied beds and rooms is minimal, with light blue segments indicating near-zero availability. This suggests that the shelter or housing facilities are operating at or near full capacity for the majority of the year.
+
+This pattern also highlights a potential undersupply of available beds and rooms, suggesting that current resources are insufficient to meet the needs of the population relying on these services.
+
+The lack of unoccupied beds and rooms points to increased demand for emergency housing or shelter services, possibly reflecting broader social issues such as housing instability, economic hardship, or limited access to affordable accommodations. Policy efforts may need to focus on expanding capacity or improving early intervention programs to alleviate the pressure on emergency housing services.
+
+## Second discussion point
+As shown in the graph (@fig-service-type), Base Shelter and Overnight Services System is the most commonly utilized program among the different types of overnight services. This service, which does not require identification or prior referral, likely reflects underlying economic instability, as it caters to those in immediate need without formal prerequisites. In contrast, more specialized programs like the Base Program - Refugee and Temporary Programs require additional qualifications, such as refugee status or pandemic-related needs, which serve more specific populations.
+
+This pattern highlights two critical issues:
+
+Lack of Preventive Systems: The high usage of emergency shelters without referrals underscores the absence of adequate preventive systems. Individuals are not receiving timely interventions from healthcare providers, social services, or community networks, leading them to rely on emergency services.
+Economic Instability: The overwhelming reliance on no-requirement shelters indicates a failure to connect people with financial assistance or housing support early enough. Many individuals turn to these programs as a last resort due to factors like unemployment, housing insecurity, or lack of sufficient safety nets.
+
+## Third discussion point
+From(@fig-homeless-groups), Mixed Adults make up the largest group in shelters, with 9,339 users. This group encompasses shelters that serve both men and women or are gender-neutral, indicating a high demand for inclusive and flexible living spaces. Men follow closely behind, with 8,576 users, reflecting the significant number of adult men in need of shelter services. Other groups like Youth (5,150) and Families (3,394) demonstrate the varying needs across age and family structures.
+
+This data points to several important issues:
+
+Mental Health and Trauma: The high number of users, especially among men and mixed adults, suggests that many individuals may face unresolved mental health or trauma-related challenges. Without early intervention or stable support systems, these individuals often end up relying on emergency shelters.
+Policy Suggestion – Expand Mental Health and Housing Services: To address these issues, expanding access to affordable housing and mental health services is essential. Many individuals likely resort to emergency shelters because they lack access to mental health care or affordable housing. Investing in community-based mental health programs and developing more affordable housing options could significantly reduce the need for emergency shelter services.
+
+## Forth discussion point
+The above (@fig-classification) indicates that a substantial number of individuals seek emergency services without prior referrals, pointing to a concerning lack of awareness or accessibility of essential resources. This trend suggests that many people may not receive necessary support, such as primary care or social work services, until their situations reach a crisis point. The absence of early referrals underscores the importance of addressing barriers that prevent individuals from accessing help sooner.
+
+This analysis highlights the urgent need for strengthening early intervention initiatives, which could identify and assist at-risk populations before they find themselves in emergencies. By implementing outreach programs focused on mental health, housing assistance, and employment services, policymakers can create pathways to support that reduce the reliance on emergency shelters. Such proactive measures could not only improve individual outcomes but also enhance the overall efficiency of social services by alleviating the pressures on emergency programs.
+
+## Weaknesses and next steps
+The findings in this paper represent a small aspect of a larger global issue, specifically focusing on the homeless population. While these results cannot be used to draw definitive conclusions about broader trends, they offer insights into patterns that may be indicative of larger-scale phenomena.
+
+The relationships discussed in this section are not statistically proven, as no models were run to confirm a correlation between the deaths of homeless individuals in shelters and the various potential explanations mentioned. Additionally, the exact causes of death may remain unknown due to confidentiality restrictions, and the inferences are based on global events that may have contributed to these fatalities.
+
+To strengthen the scientific connection, additional data collection and analysis with suitable models are necessary. For instance, to investigate a possible correlation between the rise in deaths during COVID-19 or flu outbreaks, it is essential to gather and analyze specific data on those deaths and apply a statistical model to examine any potential relationships between these factors.
+
+
+# Conclusion
+
+This investigation highlights critical trends in shelter services, revealing persistent high occupancy rates that indicate an undersupply of emergency housing resources amidst rising demand driven by housing instability and economic hardship. The over-reliance on emergency services without prior requests underscores significant gaps in preventive systems, emphasizing the need for timely interventions that address mental health issues and connect individuals to essential support before their situations escalate.
+
+While this analysis provides valuable insights, further research is necessary to establish robust statistical correlations and inform effective policy responses that can better support vulnerable populations and mitigate the homelessness crisis
+
+\newpage
+
+\appendix
+
+# Appendix {-}
+
+
+# Additional data details
+
+
+
+\newpage
+
+
+# References
+
+
